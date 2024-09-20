@@ -3,14 +3,16 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class Student implements Runnable{
 	
-	private Semaphore monitorAvailable;
+	private Semaphore monitorSleeping;
 	private Semaphore chairs;
+	private Semaphore monitorBusy;
 	private int id;
 	
-	public Student(int idS, Semaphore monitorAvailableS, Semaphore chairsS) {
+	public Student(int idS, Semaphore monitorAvailableS, Semaphore chairsS, Semaphore MonitorBusyS) {
         id = idS;
-        monitorAvailable = monitorAvailableS;
+        monitorSleeping = monitorAvailableS;
         chairs = chairsS;
+        monitorBusy = MonitorBusyS;
     }
 	
 	@Override
@@ -19,36 +21,26 @@ public class Student implements Runnable{
 		try {
 			while (true) {
 				
-				// Student programing
+				// Student programming
                 System.out.println("Student " + id + " is programming.");
-                Thread.sleep(ThreadLocalRandom.current().nextInt(2000, 5000)); //Simulating programing with a sleep thread
-                
-                // Student aks for help
-                System.out.println("Student with id: " + id + ", is going to ask for help.");
+                Thread.sleep(ThreadLocalRandom.current().nextInt(2000, 5000)); //Simulating programming with a sleep thread              
                 
                 // Student tries to acquire a chair
                 if (chairs.tryAcquire()) {
-                    System.out.println("Student " + id + " sat in a chair.");
-                    
-                    // Wakes up the monitor if asleep
-                    if (monitorAvailable.availablePermits() == 0) {
-                        monitorAvailable.release();
-                        System.out.println("Student " + id + " woke up the monitor.");
-                    }
+                    System.out.println("Student with id: " + id + ", is waiting for help.");
+                    monitorSleeping.release();
 
-                    // Waits ti get help
-                    //Takes the monitor for himslef/herslef
-                    monitorAvailable.acquire();
-                    //
-                    System.out.println("Student with id:" + id + ", is being helped.");
-                    Thread.sleep(ThreadLocalRandom.current().nextInt(1000, 3000)); // Simulation of wait
-                    //Releases the Semaphore of the montior
-                    monitorAvailable.release();
-                    
+                 // Wait if busy
+                    monitorBusy.acquire();
+                    System.out.println("Student with id: " + id + ", is receiving help.");
+                    Thread.sleep(ThreadLocalRandom.current().nextInt(2000, 5000)); // help time
+                    monitorBusy.release();
+                    chairs.release();
                 } else {
-                    // No Chairs available
-                    System.out.println("No chairs available. Student with id:" + id + ", goes back to programming depressed.");
-                }
+                    System.out.println("Student with id: " + id + ", sees no chairs available, going to the computer lab.");
+                    Thread.sleep(2000);
+                }   
+                
 			}
 		} catch (InterruptedException e) {
 			e.printStackTrace();
